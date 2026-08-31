@@ -1,0 +1,20 @@
+{
+  "cases": [
+    {
+      "query": "token rotation",
+      "relevant_ids": [
+        "d1",
+        "d3"
+      ],
+      "retrieved_ids": [
+        "d1",
+        "d2",
+        "d3"
+      ]
+    }
+  ],
+  "answer": "Token rotation limits credential exposure.",
+  "contexts": [
+    "Token rotation reduces credential lifetime."
+  ]
+}
