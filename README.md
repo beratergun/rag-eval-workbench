@@ -1,47 +1,57 @@
 # RAG Eval Workbench
 
-## Overview
-RAG Eval Workbench is a local, deterministic evaluator for bounded, recorded retrieval experiments. It reports ranking metrics and an explicitly named lexical-groundedness proxy without contacting a model provider, vector database, or remote URL.
+RAG Eval Workbench is a small local evaluation project for studying retrieval quality without having to keep a full RAG stack running. It works with recorded JSON fixtures, calculates common ranking metrics, and can also report a simple lexical groundedness proxy when an answer and its contexts are included.
 
-## Problem
-Retrieval experiments need repeatable metrics that can be inspected independently of a live RAG stack. A small recorded fixture makes metric behavior and limitations easy to review.
+I built it to make retrieval experiments easier to inspect. Instead of hiding the evaluation behind a framework, the metric functions are kept small enough to read, test and reason about directly.
 
-## Architecture
-`cli.py` validates the JSON boundary and constructs immutable retrieval cases. `rag_eval.py` computes the metrics with no I/O. Tests exercise metric behavior and invalid inputs. Duplicate document identifiers receive credit only once within a ranking.
+## What it measures
 
-## Implemented Features
-- Precision@K and Recall@K
-- Mean Reciprocal Rank (MRR)
-- nDCG@K for binary relevance labels
-- Lexical token-overlap proxy for answer/context review
-- Bounded local JSON input and deterministic JSON output
+- **Precision@K** — how much of the retrieved top-K set is relevant
+- **Recall@K** — how much of the known relevant set was recovered
+- **MRR** — how early the first relevant result appears
+- **nDCG@K** — ranking quality for binary relevance labels
+- **Lexical groundedness proxy** — token overlap between an answer and supplied contexts
 
-## Run Locally
-Python 3.12 or newer is sufficient; there are no third-party dependencies.
+Duplicate document IDs are counted only once inside the evaluated ranking. The groundedness value is deliberately described as a proxy: it is useful for a quick lexical check, but it is not a factuality or semantic-correctness score.
+
+## Project structure
+
+- `rag_eval.py` contains the metric functions and retrieval case model
+- `cli.py` validates bounded local JSON input and prints deterministic JSON output
+- `examples/` contains synthetic recorded fixtures
+- `tests/` covers metric behavior, duplicate retrievals, invalid `k` values and groundedness edge cases
+- `.github/workflows/tests.yml` runs the unit test suite on Python 3.12
+
+The project has no runtime dependency on an LLM provider, vector database or external URL.
+
+## Run locally
+
+Python 3.12 or newer is sufficient.
 
 ```bash
 python cli.py examples/sample.json --k 3
 ```
 
-## Example
-The included fixture evaluates one retrieval case and, when `answer` and `contexts` are present, adds `lexical_groundedness_proxy` to the output. The proxy measures token overlap only.
+Run the tests with:
 
-## Testing
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-## Engineering Decisions
-Metric functions are pure and deterministic. Input sizes, `k`, query length, context count, and retrieved/relevant identifiers are bounded at the CLI boundary. No transcript storage or network integration is required.
+## Engineering notes
 
-## Security / Privacy
-Use recorded, non-sensitive fixtures. The tool does not fetch URLs, call an LLM, connect to a vector database, or transmit evaluation content.
+Input size, query length, context count and retrieved/relevant identifier lists are bounded at the CLI layer. The core metric functions do not perform I/O, which keeps repeated runs deterministic and makes the calculations easy to test independently.
 
 ## Limitations
-Relevance labels are supplied by the evaluator. Binary nDCG does not model graded judgments. Lexical overlap misses semantic paraphrases and is not a factuality, correctness, or safety guarantee.
 
-## Future Improvements
-Potential extensions include graded relevance, confidence intervals, dataset comparisons, and optional offline embedding adapters with explicit provenance.
+The evaluator assumes that relevance labels are already available. nDCG currently uses binary relevance rather than graded judgments. The lexical groundedness proxy only measures token overlap, so paraphrases and semantically equivalent wording can score lower than expected.
+
+This repository is an evaluation lab rather than a complete production RAG observability platform. There is no live ingestion, model execution, vector search or automatic labeling.
+
+## Possible next steps
+
+Useful extensions would include graded relevance, confidence intervals, comparison reports across datasets and optional offline embedding-based analysis with clearly documented provenance.
 
 ## License
-MIT. See [LICENSE](LICENSE).
+
+See [LICENSE](LICENSE).
